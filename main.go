@@ -29,14 +29,7 @@ type Train struct {
 }
 
 func main() {
-
-	departureStation, arrivalStation, criteria, err := ScanInput() //... запит даних від користувача
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	result, err := FindTrains(departureStation, arrivalStation, criteria) //Виклик функції з основною логікою
+	result, err := FindTrains(scanInput()) //Виклик функції з основною логікою
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -51,6 +44,10 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 		result     Trains
 		trainSlice Trains
 	)
+
+	if err := validate(departureStation, arrivalStation, criteria); err != nil { // перевірка чи введні данні коректні
+		return nil, err
+	}
 
 	file, err := ioutil.ReadFile("./data.json") //Відкриття файлу data.json
 	if err != nil {
@@ -98,59 +95,63 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 			sizeOutputArr--
 		}
 	}
+
+	if len(result) < 1 {
+		return nil, nil
+	}
+
 	return result, nil // маєте повернути правильні значення
 }
 
 //Ф-ція запису введенних данних. Якщо в поле станції введено літери або поле пусте, повертається помилка.
 //Якщо спосіб сортування не корректно введений - помилка
-
-func ScanInput() (departureStation, arrivalStation, criteria string, err error) {
-
+func scanInput() (departureStation, arrivalStation, criteria string) {
 	var in = bufio.NewReader(os.Stdin)
 
 	fmt.Println("Станція з якої ви відправляєтесь?")
 	departureStation, _ = in.ReadString('\n')
 	departureStation = strings.TrimSpace(departureStation)
 
+	fmt.Println("Станція куди ви прямуєте?")
+	arrivalStation, _ = in.ReadString('\n')
+	arrivalStation = strings.TrimSpace(arrivalStation)
+
+	fmt.Println("Критерій сортування:  price, arrival-time, departure-time")
+	criteria, _ = in.ReadString('\n')
+	criteria = strings.TrimSpace(criteria)
+
+	return departureStation, arrivalStation, criteria
+}
+
+// Ф-ція валідації введених данних
+func validate(departureStation, arrivalStation, criteria string) error {
 	if departureStation == "" {
-		return "", "", "", errors.New("empty departure station")
+		return errors.New("empty departure station")
 	}
 
 	intValue, err := strconv.Atoi(departureStation)
 	if err != nil || intValue < 0 {
-		return "", "", "", errors.New("bad departure station input")
+		return errors.New("bad departure station input")
 	}
 
-	fmt.Println("Станція куди ви прямуєте?")
-
-	arrivalStation, _ = in.ReadString('\n')
-	arrivalStation = strings.TrimSpace(arrivalStation)
-
 	if arrivalStation == "" {
-		return "", "", "", errors.New("empty arrival station")
+		return errors.New("empty arrival station")
 	}
 
 	intValue, err = strconv.Atoi(arrivalStation)
 	if err != nil || intValue < 0 {
-		return "", "", "", errors.New("bad arrival station input")
+		return errors.New("bad arrival station input")
 	}
-
-	fmt.Println("Критерій сортування:  price, arrival-time, departure-time")
-
-	criteria, _ = in.ReadString('\n')
-	criteria = strings.TrimSpace(criteria)
 
 	if criteria != "price" && criteria != "arrival-time" && criteria != "departure-time" {
-		return "", "", "", errors.New("unsupported criteria")
+		return errors.New("unsupported criteria")
 	}
 
-	return departureStation, arrivalStation, criteria, nil
+	return nil
 }
 
 // Данний метод допомагає ф-ції Unmarshal коректно прочитати данні
-
 func (t *Train) UnmarshalJSON(j []byte) error {
-
 	var (
 		rawStrings map[string]interface{}
 	)
